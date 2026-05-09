@@ -145,7 +145,7 @@ function AuthenticatedApp({ preloadedConfig }: { preloadedConfig?: GatewayConfig
   const [dragGhost, setDragGhost] = useState<{ x: number; y: number; label: string } | null>(null)
   const paneContainerRef = useRef<HTMLDivElement | null>(null)
 
-  const NAV = NAV_ALL.filter(n => !n.ownerOnly || userRole === 'owner')
+  const NAV = NAV_ALL.filter(n => !n.ownerOnly || userRole === 'owner' || userRole === 'admin')
 
   // Reconnect when app returns from background — desktop only.
   // MobileApp has its own visibilitychange handler; running both causes double-connect
