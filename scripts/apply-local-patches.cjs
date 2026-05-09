@@ -830,3 +830,64 @@ patch(
 // HARD RULE: NEVER reset Kennan's custom quick commands.
 // The DB patch that auto-reset "save" command has been permanently removed.
 // Kennan's custom save text MUST be preserved across all merges/pulls.
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KENNAN LOCAL CONFIG OVERRIDES
+// These patches preserve Kennan's local setup when merging from main branch.
+// Main branch has Casin's config; these restore Kennan's after every merge.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Kennan Override 1: agents.json — full replacement ──────────────────────
+// Main has Casin's agents (Byte, Beta, etc.); Kennan uses Ghosty + work only.
+const KENNAN_AGENTS = `[
+  {
+    "id": "main",
+    "name": "Ghosty",
+    "emoji": "👻",
+    "description": "Sonnet — default",
+    "default": true,
+    "visibleInPicker": false
+  },
+  {
+    "id": "work",
+    "name": "work",
+    "emoji": "🤖",
+    "description": "",
+    "visibleInPicker": true
+  }
+]
+`
+
+const agentsPath = path.join(ROOT, 'server/config/agents.json')
+const currentAgents = fs.readFileSync(agentsPath, 'utf8')
+if (currentAgents.includes('"name": "Ghosty"')) {
+  console.log('  [skip] server/config/agents.json — already Kennan config')
+} else {
+  fs.writeFileSync(agentsPath, KENNAN_AGENTS, 'utf8')
+  console.log('  [ok]   server/config/agents.json — restored Kennan config')
+}
+
+// ─── Kennan Override 2: server/index.js costs schema (raw_nexus → kennan) ────
+// Main uses raw_nexus.* tables; Kennan's BigQuery exports to kennan.* schema.
+patch(
+  'server/index.js',
+  'kennan.claw_user_daily_costs',
+  (c) => {
+    // Replace all raw_nexus references with kennan schema
+    c = c.replace(/raw_nexus\.claw_user_daily_costs/g, 'kennan.claw_user_daily_costs')
+    c = c.replace(/raw_nexus\.claw_session_costs/g, 'kennan.claw_session_costs')
+    c = c.replace(/raw_nexus\.octis_session_labels/g, 'kennan.octis_session_labels')
+    return c
+  }
+)
+
+// ─── Kennan Override 3: App.tsx — admin can see owner-only nav items ─────────
+// Allows userRole='admin' to access the same nav items as 'owner'.
+patch(
+  'src/App.tsx',
+  "userRole === 'admin'",
+  (c) => c.replace(
+    "const NAV = NAV_ALL.filter(n => !n.ownerOnly || userRole === 'owner')",
+    "const NAV = NAV_ALL.filter(n => !n.ownerOnly || userRole === 'owner' || userRole === 'admin')"
+  )
+)
